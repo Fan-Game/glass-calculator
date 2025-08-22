@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Калькулятор заробітку</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    /* VARIABLES (LIGHT THEME) */
+    :root {
+        --bg: #f4f4f9;
+        --card: #ffffff;
+        --txt: #212529;
+        --muted: #6c757d;
+        --primary: #0056b3;
+        --primary-weak: #e7f3ff;
+        --ok: #28a745;
+        --danger: #dc3545;
+        --border: #dee2e6;
+        --green-soft: #d4edda;
+        --green-soft-hover: #c3e6cb;
+        --bg-chart: #ffffff;
+        --btn-edit-bg: #e0e7ff;
+        --btn-edit-txt: #3f51b5;
+        --btn-del-bg: #ffebee;
+        --btn-del-txt: #c62828;
+        --btn-primary-bg: #007bff;
+        --btn-primary-hover: #0069d9;
+    }
+
+    /* DARK THEME */
+    .dark-mode {
+        --bg: #121212;
+        --card: #1e1e1e;
+        --txt: #e0e0e0;
+        --muted: #b0b0b0;
+        --primary: #4a90e2;
+        --primary-weak: #283e58;
+        --ok: #4caf50;
+        --danger: #f44336;
+        --border: #333;
+        --green-soft: #2f4f4f;
+        --green-soft-hover: #3a5f5f;
+        --bg-chart: #1e1e1e;
+        --btn-edit-bg: #2a3a59;
+        --btn-edit-txt: #9ab4f0;
+        --btn-del-bg: #4d2e2e;
+        --btn-del-txt: #f77f7f;
+        --btn-primary-bg: #0056b3;
+        --btn-primary-hover: #004494;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        background: var(--bg);
+        color: var(--txt);
+        padding: 10px;
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    .container {
+        max-width: 900px;
+        margin: auto;
+        background: var(--card);
+        padding: 16px 16px 24px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
+        transition: background-color 0.3s;
+    }
+    .main-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 0 8px 8px 8px;
+    }
+    .theme-toggle-btn {
+        background: none;
+        border: none;
+        font-size: 1.5em;
+        cursor: pointer;
+        color: var(--txt);
+        padding: 0;
+    }
+
+    h2 { margin: 0; text-align: left; }
+
+    /* Tabs */
+    .tabs {
+        display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto;
+        border-bottom: 1px solid var(--border); margin-bottom: 12px;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tabs { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    .tab-btn {
+        padding: 10px 14px; border: none; background: #f6f7fb; border-radius: 10px 10px 0 0;
+        cursor: pointer; font-weight: 600; color: #222; flex-shrink: 0;
+        transition: background-color 0.2s, color 0.2s;
+    }
+    .dark-mode .tab-btn { background: #252525; color: #ccc; }
+    .tab-btn[aria-selected="true"] { background: var(--primary); color: #fff; }
+
+    .tab-panel { display: none; animation: fade .15s ease; }
+    .tab-panel.active { display: block; }
+    @keyframes fade { from { opacity: .5; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    .item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .item label { flex-basis: 60%; }
+    .item input, .item textarea, .item select, #workerFilter {
+        width: 110px; padding: 8px; font-size: 1em; text-align: right;
+        border: 1px solid var(--border); border-radius: 6px;
+        background: var(--bg); color: var(--txt);
+        transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+    }
+    .item textarea { width: 100%; height: 60px; box-sizing: border-box; }
+    #workerFilter, .inline-form input, .new-category-form input { width: 100%; box-sizing: border-box; text-align: left; }
+    .inline-form, .new-category-form { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .inline-form input { flex: 1; min-width: 120px; }
+    .inline-form button { flex-basis: content; white-space: nowrap; }
+
+
+    .date-selector { text-align: center; margin-bottom: 16px; }
+    .date-selector input {
+        padding: 8px; font-size: 1.05em; border: 1px solid var(--border); border-radius: 6px;
+        background: var(--bg); color: var(--txt);
+    }
+
+    /* Primary buttons styles */
+    .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+    .primary-btn {
+        width: 100%; padding: 14px; font-size: 1.05em; border: none; border-radius: 10px;
+        cursor: pointer; font-weight: 700; color: #fff;
+        transition: background-color 0.2s;
+        background: var(--btn-primary-bg);
+        box-sizing: border-box;
+    }
+    .primary-btn:hover { background: var(--btn-primary-hover); }
+    .primary-btn.ok { background: var(--ok); }
+    .primary-btn.danger { background: var(--danger); }
+    
+    #result {
+        font-size: 1.2em; text-align: center; margin: 14px 0;
+        color: var(--primary); background: var(--primary-weak); padding: 10px; border-radius: 10px;
+    }
+    #result .result-line { display: flex; justify-content: space-between; padding: 2px 0; }
+    #result .result-line .label { font-weight: 500; }
+    #result .result-line .value { font-weight: 700; }
+    #result .tax-amount { color: var(--danger); }
+    #result .final-total { color: var(--ok); font-size: 1.3em; }
+
+    .section-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--bg); transition: background-color 0.3s, border-color 0.3s; }
+
+    /* Workers */
+    .workers-grid-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .workers-grid-item:last-child { border-bottom: none; }
+    .workers-grid-item .name { font-weight: 600; flex-grow: 1; }
+    .workers-grid-item .coef { color: var(--muted); flex-shrink: 0; }
+    .workers-grid-item .actions { display: flex; gap: 6px; justify-content: flex-end; flex-shrink: 0; }
+    .workers-grid-item button { padding: 6px 10px; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+    .edit-btn { background: var(--btn-edit-bg); color: var(--btn-edit-txt); }
+    .del-btn { background: var(--btn-del-bg); color: var(--btn-del-txt); }
+
+    /* Checkboxes & Shift breakdown */
+    .checkbox-list label { display: block; margin: 5px 0; }
+    .salary-table { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 6px; }
+    .salary-table .row { display: flex; justify-content: space-between; margin: 4px 0; }
+    .salary-table .row strong { font-weight: 700; }
+    .shift-summary { border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 10px; background: var(--bg); }
+    .shift-summary-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; cursor: pointer; }
+    .shift-details { margin-top: 10px; display: none; }
+    .shift-details.active { display: block; }
+
+    /* History */
+    #historyContainer { margin-top: 20px; padding-top: 10px; }
+    #historyContainer h3 { text-align: center; margin: 10px 0; }
+    .month-group .month-header {
+        display: flex; justify-content: space-between; align-items: center; padding: 12px;
+        background: var(--green-soft); font-weight: 700; border-radius: 10px;
+        cursor: pointer; margin-top: 10px; transition: background-color 0.2s;
+    }
+    .month-group .month-header:hover { background: var(--green-soft-hover); }
+    .month-group .days-list { list-style: none; padding: 0 0 0 14px; margin: 0; border-left: 2px solid var(--green-soft); max-height: 900px; overflow: hidden; transition: max-height .25s ease; }
+    .month-group.collapsed .days-list { max-height: 0; }
+    .month-group .days-list li {
+        background: #f9f9f9; padding: 8px; margin: 6px 0; border-radius: 8px; cursor: pointer;
+        display: grid; grid-template-columns: 1fr auto; align-items: center;
+        transition: background-color 0.2s;
+    }
+    .dark-mode .month-group .days-list li { background: #252525; }
+    .month-group .days-list li:hover { background: #efefef; }
+    .dark-mode .month-group .days-list li:hover { background: #303030; }
+    .history-entry-compact { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 8px; }
+    .history-date { font-weight: bold; color: var(--primary); flex-shrink: 0; min-width: 80px; }
+    .history-total { font-weight: bold; color: var(--txt); }
+    .history-notes { font-style: italic; color: var(--muted); font-size: 0.9em; margin-top: 4px; width: 100%; white-space: pre-wrap; grid-column: 1 / -1; }
+    .history-delete-btn, .history-edit-btn { background: var(--btn-del-bg); color: var(--btn-del-txt); border: none; border-radius: 6px; padding: 4px 8px; font-weight: bold; cursor: pointer; font-size: 1.1em; line-height: 1; transition: background-color 0.2s ease; }
+    .history-edit-btn { background: var(--btn-edit-bg); color: var(--btn-edit-txt); }
+    .arrow { transition: transform .2s; display: inline-block; }
+    .collapsed .arrow { transform: rotate(-90deg); }
+
+    /* Toast Notification Styles */
+    #toast-notification {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: var(--ok);
+        color: #fff;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-size: 1em;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        z-index: 1000;
+        min-width: 250px;
+        text-align: center;
+    }
+    #toast-notification.show {
+        visibility: visible;
+        opacity: 1;
+        bottom: 30px;
+    }
+    .dark-mode #toast-notification {
+        background-color: var(--ok);
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="main-header">
+        <h2>Калькулятор заробітку</h2>
+        <button id="theme-toggle-btn" class="theme-toggle-btn">☀️</button>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Навігація">
+        <button class="tab-btn" role="tab" aria-selected="true" data-tab="calc">Розрахунок</button>
+        <button class="tab-btn" role="tab" aria-selected="false" data-tab="workers">Працівники</button>
+        <button class="tab-btn" role="tab" aria-selected="false" data-tab="history">Історія</button>
+        <button class="tab-btn" role="tab" aria-selected="false" data-tab="prices">Ціни</button>
+    </div>
+
+    <section id="tab-calc" class="tab-panel active" role="tabpanel">
+        <div class="date-selector">
+            <label for="currentDate"><b>Дата:</b> </label>
+            <input type="date" id="currentDate">
+        </div>
+        <div id="shiftsContainer"></div>
+        <div id="inputs"></div>
+        <div id="result">Всього: 0.00</div>
+        <div class="section-card" style="margin-top:16px;">
+            <h3 style="margin:6px 0 8px;">Хто працював у зміну?</h3>
+            <div class="checkbox-list" id="workerCheckboxes"></div>
+            <div id="shiftBreakdown" class="salary-table"></div>
+        </div>
+        <div class="section-card" style="margin-top:16px;">
+            <h3 style="margin:6px 0 8px;">Нотатки</h3>
+            <textarea id="notes" placeholder="Додати коментар до зміни"></textarea>
+        </div>
+        <div class="actions">
+            <button id="saveBtn" class="primary-btn ok">ЗБЕРЕГТИ ЗМІНУ</button>
+            <button id="addShiftBtn" class="primary-btn">ДОДАТИ НОВУ ЗМІНУ</button>
+            <button id="clearCurrentBtn" class="primary-btn danger">ОЧИСТИТИ ФОРМУ</button>
+        </div>
+    </section>
+
+    <section id="tab-workers" class="tab-panel" role="tabpanel">
+        <div class="section-card">
+            <h3 style="margin:0 0 8px;text-align:center;">Список працівників</h3>
+            <div id="workerList" class="workers-grid"></div>
+            <div class="inline-form">
+                <input type="text" id="workerName" placeholder="Ім'я" />
+                <input type="number" id="workerCoef" step="0.01" placeholder="Коеф." />
+                <button class="primary-btn" id="addOrUpdateBtn">Додати</button>
+                <button class="primary-btn danger" id="resetWorkerBtn">Скасувати</button>
+            </div>
+        </div>
+        <div class="section-card" style="margin-top:16px;">
+            <h3 style="margin:0 0 8px;text-align:center;">Підсумок за поточний місяць</h3>
+            <div id="workerTotals"></div>
+        </div>
+    </section>
+
+    <section id="tab-history" class="tab-panel" role="tabpanel">
+        <div class="section-card">
+            <h3 style="margin:0 0 8px;text-align:center;">Графік заробітку</h3>
+            <div style="padding: 10px; border-radius: 10px; background: var(--bg-chart); border: 1px solid var(--border);">
+                <canvas id="earningsChart"></canvas>
+            </div>
+        </div>
+        <div class="section-card" style="margin-top:16px;">
+            <h3 style="margin:0 0 8px;text-align:center;">Фільтр по працівнику</h3>
+            <select id="workerFilter">
+                <option value="all">Всі працівники</option>
+            </select>
+        </div>
+        <div id="historyContainer">
+            <h3 style="margin-top: 16px;">Історія записів</h3>
+            <div id="history"></div>
+            <div class="actions">
+                <button id="restoreBtn" class="primary-btn">ВІДНОВИТИ З ФАЙЛА</button>
+                <input type="file" id="loadFile" accept=".json" style="display: none;">
+                <button id="saveFileBtn" class="primary-btn">ЗБЕРЕГТИ В ФАЙЛ</button>
+                <button id="clearBtn" class="primary-btn danger">Очистити всю історію</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="tab-prices" class="tab-panel" role="tabpanel">
+        <div class="section-card">
+            <h3 style="margin:0 0 8px;text-align:center;">Редагування цін</h3>
+            <div id="priceInputs"></div>
+            <div class="actions">
+                <button id="savePricesBtn" class="primary-btn">ЗБЕРЕГТИ ЦІНИ</button>
+            </div>
+        </div>
+        <div class="section-card" style="margin-top:16px;">
+            <h3 style="margin:0 0 8px;text-align:center;">Керування власними категоріями</h3>
+            <div id="customCategoriesList" class="workers-grid"></div>
+            <div class="inline-form">
+                <input type="text" id="newCategoryName" placeholder="Назва категорії" />
+                <input type="number" id="newCategoryPrice" step="0.01" placeholder="Ціна" />
+                <button class="primary-btn ok" id="addOrUpdateCategoryBtn">Додати</button>
+                <button class="primary-btn danger" id="resetCategoryBtn">Скасувати</button>
+            </div>
+        </div>
+    </section>
+</div>
+<div id="toast-notification"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    /* ======= Дані та довідники ======= */
+    const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzvjl3o6lAtXIwjtoYzKrGzBtZnAoh1-5vS6UVM_c1hMOTYAXlWUDe_F2guwwv-PH55A/exec'; // 🚨 Вставте вашу URL-адресу тут!
+
+    const defaultGlassTypes = {
+        hst: { name: 'HST', price: 11 }, s4: { name: 'Скло 4', price: 11.64 }, s5: { name: 'Скло 5', price: 9.6 },
+        s6f: { name: 'Скло 6F', price: 12.18 }, s6: { name: 'Скло 6', price: 10.8 }, s8f: { name: 'Скло 8F', price: 13.44 },
+        s8: { name: 'Скло 8', price: 16.88 }, s10f: { name: 'Скло 10F', price: 22.40 }, s10: { name: 'Скло 10', price: 24.40 },
+        linMeters: { name: 'Метрів пог.', price: 1.15 }
+    };
+    let allCategories = new Map();
+    let taxRate = 0;
+    let chartInstance = null;
+    const monthNames = ["січня", "лютого", "березня", "квітня", "травня", "червня", "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"];
+    const monthNamesFull = ["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень", "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"];
+
+    /* ======= DOM елементи ======= */
+    const dateInput = document.getElementById('currentDate'), inputsContainer = document.getElementById('inputs'),
+        resultEl = document.getElementById('result'), historyEl = document.getElementById('history'),
+        workerListEl = document.getElementById('workerList'), workerCheckboxes = document.getElementById('workerCheckboxes'),
+        shiftBreakdown = document.getElementById('shiftBreakdown'), addOrUpdateWorkerBtn = document.getElementById('addOrUpdateBtn'),
+        resetWorkerBtn = document.getElementById('resetWorkerBtn'), priceInputsContainer = document.getElementById('priceInputs'),
+        workerTotalsEl = document.getElementById('workerTotals'), notesInput = document.getElementById('notes'),
+        workerFilterSelect = document.getElementById('workerFilter'), loadFileInput = document.getElementById('loadFile'),
+        themeToggleBtn = document.getElementById('theme-toggle-btn'), earningsChartCanvas = document.getElementById('earningsChart'),
+        saveBtn = document.getElementById('saveBtn'), saveFileBtn = document.getElementById('saveFileBtn'),
+        clearBtn = document.getElementById('clearBtn'), savePricesBtn = document.getElementById('savePricesBtn'),
+        restoreBtn = document.getElementById('restoreBtn'), tabButtons = document.querySelectorAll('.tab-btn'),
+        panels = { calc: document.getElementById('tab-calc'), workers: document.getElementById('tab-workers'), history: document.getElementById('tab-history'), prices: document.getElementById('tab-prices') },
+        addShiftBtn = document.getElementById('addShiftBtn'), clearCurrentBtn = document.getElementById('clearCurrentBtn'),
+        shiftsContainer = document.getElementById('shiftsContainer');
+    const addOrUpdateCategoryBtn = document.getElementById('addOrUpdateCategoryBtn');
+    const resetCategoryBtn = document.getElementById('resetCategoryBtn');
+    const newCategoryNameInput = document.getElementById('newCategoryName');
+    const newCategoryPriceInput = document.getElementById('newCategoryPrice');
+    const customCategoriesListEl = document.getElementById('customCategoriesList');
+    const toastNotification = document.getElementById('toast-notification');
+
+    let currentShiftId = null;
+
+    /* ======= Toast Notification Function ======= */
+    const showToast = (message, isError = false) => {
+        toastNotification.textContent = message;
+        toastNotification.style.backgroundColor = isError ? 'var(--danger)' : 'var(--ok)';
+        toastNotification.classList.add('show');
+        setTimeout(() => {
+            toastNotification.classList.remove('show');
+        }, 3000);
+    };
+
+    /* ======= Tabs ======= */
+    tabButtons.forEach(btn => btn.addEventListener('click', () => {
+        const key = btn.dataset.tab;
+        Object.values(panels).forEach(p => p.classList.remove('active'));
+        panels[key].classList.add('active');
+        tabButtons.forEach(b => b.setAttribute('aria-selected', b === btn ? 'true' : 'false'));
+        localStorage.setItem('activeTab', key);
+        if (key === 'history') { displayHistory(); renderEarningsChart(); }
+        if (key === 'prices') { createPriceInputs(); renderCustomCategories(); } 
+        if (key === 'calc') createInputs();
+        if (key === 'workers') renderWorkerTotals();
+    }));
+    const restoreTab = () => { const key = localStorage.getItem('activeTab'); if (key && panels[key]) document.querySelector(`.tab-btn[data-tab="${key}"]`).click(); };
+
+    /* ======= Light/Dark Theme ======= */
+    const toggleTheme = () => {
+        const isDarkMode = document.body.classList.toggle('dark-mode');
+        localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+        themeToggleBtn.textContent = isDarkMode ? '🌙' : '☀️';
+        if (chartInstance) { chartInstance.destroy(); renderEarningsChart(); }
+    };
+    const loadTheme = () => {
+        if (localStorage.getItem('theme') === 'dark') { document.body.classList.add('dark-mode'); themeToggleBtn.textContent = '🌙'; } 
+        else { document.body.classList.remove('dark-mode'); themeToggleBtn.textContent = '☀️'; }
+    };
+
+    /* ======= Data Persistence (перенесено до Google Sheets) ======= */
+    const getWorkers = () => JSON.parse(localStorage.getItem('workers')) || [];
+    const saveWorkers = (workers) => localStorage.setItem('workers', JSON.stringify(workers));
+    
+    const loadPrices = () => { 
+        allCategories = new Map(Object.entries(defaultGlassTypes));
+        const customCategories = JSON.parse(localStorage.getItem('customCategories')) || {};
+        for (const [id, value] of Object.entries(customCategories)) {
+            allCategories.set(id, value);
+        }
+        taxRate = parseFloat(localStorage.getItem('glassTaxRate')) || 0; 
+    };
+
+    const savePrices = () => {
+        const tempCategories = new Map();
+        let allValid = true;
+
+        for (const [id, value] of allCategories.entries()) {
+            const input = document.getElementById(`price-${id}`);
+            if (input) {
+                const price = parseFloat(input.value);
+                if (isNaN(price) || price < 0) {
+                    showToast(`Некоректна ціна для ${value.name}!`, true);
+                    allValid = false;
+                    break;
+                }
+                tempCategories.set(id, { name: value.name, price: price });
+            }
+        }
+        
+        const newTaxRate = parseFloat(document.getElementById('taxRate').value);
+        if (isNaN(newTaxRate) || newTaxRate < 0) {
+            showToast('Некоректний відсоток податку!', true);
+            allValid = false;
+        }
+        
+        if (allValid) {
+            const pricesToSave = {};
+            const customPricesToSave = {};
+            for (const [id, value] of tempCategories.entries()) {
+                if (defaultGlassTypes[id]) {
+                    pricesToSave[id] = value;
+                } else {
+                    customPricesToSave[id] = value;
+                }
+            }
+            localStorage.setItem('glassPrices', JSON.stringify(pricesToSave));
+            localStorage.setItem('customCategories', JSON.stringify(customPricesToSave));
+            localStorage.setItem('glassTaxRate', newTaxRate);
+            
+            loadPrices();
+            createInputs();
+            renderWorkerTotals();
+            displayHistory();
+            showToast('Ціни та податок збережено!');
+        }
+    };
+    
+    /* ======= Управління категоріями ======= */
+    let editCategoryId = null;
+
+    const renderCustomCategories = () => {
+        const customCategories = JSON.parse(localStorage.getItem('customCategories')) || {};
+        customCategoriesListEl.innerHTML = '';
+        if (Object.keys(customCategories).length === 0) {
+            customCategoriesListEl.innerHTML = `<div style="color:var(--muted);padding:6px 0;">Поки немає власних категорій.</div>`;
+            return;
+        }
+        for (const id in customCategories) {
+            const cat = customCategories[id];
+            const row = document.createElement('div');
+            row.className = 'workers-grid-item';
+            row.dataset.id = id;
+            row.innerHTML = `
+                <div class="name">${cat.name}</div>
+                <div class="coef">ціна: ${cat.price.toFixed(2)}</div>
+                <div class="actions">
+                    <button class="edit-btn">✎</button>
+                    <button class="del-btn">✖</button>
+                </div>
+            `;
+            customCategoriesListEl.appendChild(row);
+        }
+    };
+
+    const startEditCategory = (id) => {
+        const customCategories = JSON.parse(localStorage.getItem('customCategories')) || {};
+        const cat = customCategories[id];
+        if (cat) {
+            newCategoryNameInput.value = cat.name;
+            newCategoryPriceInput.value = cat.price;
+            editCategoryId = id;
+            addOrUpdateCategoryBtn.textContent = 'Оновити';
+        }
+    };
+
+    const resetCategoryForm = () => {
+        newCategoryNameInput.value = '';
+        newCategoryPriceInput.value = '';
+        editCategoryId = null;
+        addOrUpdateCategoryBtn.textContent = 'Додати';
+    };
+    
+    const handleAddOrUpdateCategory = () => {
+        const name = newCategoryNameInput.value.trim();
+        const price = parseFloat(newCategoryPriceInput.value);
+        
+        if (!name || isNaN(price) || price < 0) {
+            showToast('Будь ласка, введіть коректні назву та ціну!', true);
+            return;
+        }
+
+        let customCategories = JSON.parse(localStorage.getItem('customCategories')) || {};
+        const newId = name.toLowerCase().replace(/\s/g, '');
+
+        if (editCategoryId) {
+            if (editCategoryId !== newId && (customCategories[newId] || defaultGlassTypes[newId])) {
+                showToast('Категорія з такою назвою вже існує. Будь ласка, оберіть іншу назву.', true);
+                return;
+            }
+            delete customCategories[editCategoryId];
+            customCategories[newId] = { name, price };
+            editCategoryId = null;
+        } else {
+            if (customCategories[newId] || defaultGlassTypes[newId]) {
+                showToast('Категорія з такою назвою вже існує. Будь ласка, оберіть іншу назву.', true);
+                return;
+            }
+            customCategories[newId] = { name, price };
+        }
+        
+        localStorage.setItem('customCategories', JSON.stringify(customCategories));
+        
+        loadPrices();
+        renderCustomCategories();
+        createPriceInputs();
+        
+        resetCategoryForm();
+        showToast('Категорію збережено!');
+    };
+
+    const removeCustomCategory = (id) => {
+        if (confirm('Ви впевнені, що хочете видалити цю категорію?')) {
+            const customCategories = JSON.parse(localStorage.getItem('customCategories')) || {};
+            delete customCategories[id];
+            localStorage.setItem('customCategories', JSON.stringify(customCategories));
+            loadPrices();
+            renderCustomCategories();
+            createPriceInputs();
+            createInputs();
+            showToast('Категорію видалено!');
+        }
+    };
+
+    /* ======= UI Creation ======= */
+    const createInputs = () => {
+        inputsContainer.innerHTML = '';
+        allCategories.forEach((item, id) => {
+            const isGlass = defaultGlassTypes[id] && id !== 'linMeters';
+            const placeholderText = isGlass ? 'м²' : (id === 'linMeters' ? 'м. пог.' : 'кількість');
+            inputsContainer.innerHTML += `<div class="item"><label for="${id}">${item.name} (${item.price.toFixed(2)}):</label><input type="number" id="${id}" min="0" step="0.01" placeholder="${placeholderText}"></div>`;
+        });
+        inputsContainer.querySelectorAll('input').forEach(input => input.addEventListener('input', onInputsChange));
+    };
+
+    const createPriceInputs = () => {
+        priceInputsContainer.innerHTML = '';
+        allCategories.forEach((item, id) => {
+            priceInputsContainer.innerHTML += `<div class="item"><label for="price-${id}">${item.name}:</label><input type="number" id="price-${id}" min="0" step="0.01" value="${item.price.toFixed(2)}"></div>`;
+        });
+        priceInputsContainer.innerHTML += `<div class="item"><label for="taxRate">Податок (%):</label><input type="number" id="taxRate" min="0" step="0.1" value="${taxRate.toFixed(2)}"></div>`;
+    };
+
+    /* ======= Calculation Logic ======= */
+    const calculate = () => {
+        let total = 0, totalM2 = 0;
+        const glassDetails = {};
+        allCategories.forEach((item, id) => {
+            const val = parseFloat(document.getElementById(id)?.value) || 0;
+            if (val > 0) {
+                total += val * item.price;
+                if (defaultGlassTypes[id] && id !== 'linMeters') totalM2 += val;
+                glassDetails[item.name] = val;
+            }
+        });
+        const taxAmount = taxRate > 0 ? total * (taxRate / 100) : 0;
+        const totalAfterTax = total - taxAmount;
+        return { total: total.toFixed(2), totalM2: totalM2.toFixed(2), taxAmount: taxAmount.toFixed(2), totalAfterTax: totalAfterTax.toFixed(2), glassDetails };
+    };
+    const onInputsChange = () => {
+        const { total, totalM2, taxAmount, totalAfterTax } = calculate();
+        resultEl.innerHTML = `
+            <div class="result-line">
+                <span class="label">Загальна сума:</span>
+                <span class="value">${total}</span>
+            </div>
+            <div class="result-line">
+                <span class="label">Податок (${taxRate}%):</span>
+                <span class="value tax-amount">- ${taxAmount}</span>
+            </div>
+            <div class="result-line total-line">
+                <span class="label">До виплати:</span>
+                <span class="value final-total">${totalAfterTax}</span>
+            </div>
+            <div class="result-line" style="font-weight: normal; font-size: 0.8em; color: var(--muted); margin-top: 5px;">
+                ${totalM2} м², ${parseFloat(document.getElementById('linMeters')?.value || 0).toFixed(2)} м. пог.
+            </div>
+        `;
+        renderShiftBreakdown(parseFloat(totalAfterTax));
+    };
+
+    /* ======= Чекбокси працівників у зміні ======= */
+    const renderWorkerCheckboxes = (selected = []) => {
+        const workers = getWorkers();
+        workerCheckboxes.innerHTML = '';
+        workers.forEach(w => {
+            const lbl = document.createElement('label');
+            const checked = selected.some(sel => sel.name === w.name);
+            lbl.innerHTML = `<input type="checkbox" value="${w.name}" ${checked ? 'checked' : ''}> ${w.name}`;
+            workerCheckboxes.appendChild(lbl);
+        });
+        workerCheckboxes.querySelectorAll('input[type="checkbox"]').forEach(ch => {
+            ch.addEventListener('change', onInputsChange);
+        });
+    };
+
+    /* ======= Розподіл по зміні (онлайн) ======= */
+    const renderShiftBreakdown = (dayTotal) => {
+        const selectedWorkers = getSelectedWorkers();
+        shiftBreakdown.innerHTML = '';
+        if (selectedWorkers.length === 0) {
+            shiftBreakdown.innerHTML = `<div class="row" style="color:var(--muted)">Нікого не обрано у зміну</div>`;
+            return;
+        }
+        const sumCoef = selectedWorkers.reduce((s, w) => s + Number(w.coef || 0), 0) || 1;
+        selectedWorkers.forEach(w => {
+            const salary = dayTotal * w.coef / sumCoef;
+            const row = document.createElement('div');
+            row.className = 'row';
+            row.innerHTML = `<span>${w.name}</span><strong>${salary.toFixed(2)}</strong>`;
+            shiftBreakdown.appendChild(row);
+        });
+    };
+
+    /* ======= Збереження дня (в Google Sheets) ======= */
+    const saveData = async () => {
+        const date = dateInput.value;
+        if (!date) {
+            showToast('Будь ласка, виберіть дату!', true);
+            return;
+        }
+    
+        const { total, taxAmount, totalAfterTax, glassDetails } = calculate();
+        if (parseFloat(total) <= 0) {
+            showToast('Немає даних для збереження!', true);
+            return;
+        }
+    
+        const selectedWorkers = getSelectedWorkers();
+        const notes = notesInput.value.trim();
+        
+        const dataToSend = {
+            date: date,
+            notes: notes,
+            workers: selectedWorkers,
+            total,
+            taxAmount,
+            totalAfterTax,
+            glass: glassDetails
+        };
+    
+        try {
+            const response = await fetch(GOOGLE_SHEETS_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dataToSend)
+            });
+            const result = await response.json();
+            
+            if (result.result === "success") {
+                showToast("Дані успішно збережено в Google Таблицю!");
+                clearCurrentForm();
+            } else {
+                showToast("Помилка збереження даних. Перевірте Apps Script.", true);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast("Помилка відправки даних. Перевірте URL.", true);
+        }
+    };
+    
+
+    const clearCurrentForm = () => {
+        document.querySelectorAll('#inputs input').forEach(input => input.value = '');
+        notesInput.value = '';
+        renderWorkerCheckboxes();
+        onInputsChange();
+        currentShiftId = null;
+        saveBtn.textContent = 'ЗБЕРЕГТИ ЗМІНУ';
+    };
+
+    const loadShiftForEdit = (date, shiftId) => {
+        showToast('Функція редагування історії наразі недоступна при синхронізації з Google Таблицями.', true);
+        // Залишимо цю функцію для локального використання, але деактивуємо для хмари
+    };
+
+    /* ======= Формат дати ======= */
+    const formatDate = (dateStr) => {
+        const [y, m, d] = dateStr.split('-');
+        return `${parseInt(d)} ${monthNames[parseInt(m)-1]}`;
+    };
+
+    /* ======= Історія (більше не зберігається локально) ======= */
+    const displayHistory = () => {
+        historyEl.innerHTML = `<div style="color:var(--muted);text-align:center;">
+            Історія більше не зберігається локально. <br>Всі дані тепер у вашій Google Таблиці!
+        </div>`;
+    };
+
+    const clearHistory = () => {
+        showToast('Очистити історію можна лише безпосередньо в Google Таблиці.', true);
+    };
+
+    const removeShiftFromHistory = (date, shiftId) => {
+        showToast('Видалити зміну можна лише безпосередньо в Google Таблиці.', true);
+    };
+
+    /* ======= Збереження даних у файл (з localStorage) ======= */
+    const saveHistoryToFile = () => {
+        const historyData = {
+            history: JSON.parse(localStorage.getItem('glassHistory')) || {},
+            workers: JSON.parse(localStorage.getItem('workers')) || [],
+            prices: Object.fromEntries(allCategories),
+            taxRate: parseFloat(localStorage.getItem('glassTaxRate')) || 0
+        };
+
+        const dataStr = JSON.stringify(historyData, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `калькулятор_скло_резервна_копія_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast('Резервну копію збережено!');
+    };
+
+    /* ======= Відновлення даних з файлу ======= */
+    loadFileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (!file) {
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (confirm('Ви впевнені, що хочете відновити дані з цього файлу? Поточні дані будуть замінені.')) {
+                    if (data.history) localStorage.setItem('glassHistory', JSON.stringify(data.history));
+                    if (data.workers) localStorage.setItem('workers', JSON.stringify(data.workers));
+                    if (data.prices) {
+                        const custom = {};
+                        const glass = {};
+                        for (const key in data.prices) {
+                            if (defaultGlassTypes[key]) {
+                                glass[key] = data.prices[key];
+                            } else {
+                                custom[key] = data.prices[key];
+                            }
+                        }
+                        localStorage.setItem('glassPrices', JSON.stringify(glass));
+                        localStorage.setItem('customCategories', JSON.stringify(custom));
+                    }
+                    if (data.taxRate) localStorage.setItem('glassTaxRate', data.taxRate);
+                    showToast('Дані успішно відновлено!');
+                    window.location.reload();
+                }
+            } catch (error) {
+                showToast('Помилка: Неможливо прочитати файл. Переконайтеся, що це коректний файл резервної копії.', true);
+            }
+        };
+        reader.readAsText(file);
+    });
+    
+    restoreBtn.addEventListener('click', () => {
+        loadFileInput.click();
+    });
+
+    /* ======= Управління працівниками ======= */
+    let editWorkerIndex = null;
+
+    const renderWorkers = () => {
+        const workers = getWorkers();
+        workerListEl.innerHTML = '';
+        workerFilterSelect.innerHTML = '<option value="all">Всі працівники</option>';
+        if (workers.length === 0) {
+            workerListEl.innerHTML = `<div style="color:var(--muted);padding:6px 0;">Поки що немає працівників. Додай першого нижче 👇</div>`;
+            return;
+        }
+        workers.forEach((w, i) => {
+            const row = document.createElement('div');
+            row.className = 'workers-grid-item';
+            row.dataset.index = i;
+            row.innerHTML = `
+                <div class="name">${w.name}</div>
+                <div class="coef">коеф. ${Number(w.coef).toFixed(2)}</div>
+                <div class="actions">
+                    <button class="edit-btn">✎</button>
+                    <button class="del-btn">✖</button>
+                </div>
+            `;
+            workerListEl.appendChild(row);
+            const option = document.createElement('option');
+            option.value = w.name;
+            option.textContent = w.name;
+            workerFilterSelect.appendChild(option);
+        });
+    };
+
+    const startEditWorker = (index) => {
+        const workers = getWorkers();
+        const w = workers[index];
+        document.getElementById('workerName').value = w.name;
+        document.getElementById('workerCoef').value = w.coef;
+        editWorkerIndex = index;
+        addOrUpdateWorkerBtn.textContent = 'Оновити';
+    };
+
+    const resetWorkerForm = () => {
+        document.getElementById('workerName').value = '';
+        document.getElementById('workerCoef').value = '';
+        editWorkerIndex = null;
+        addOrUpdateWorkerBtn.textContent = 'Додати';
+    };
+
+    const handleAddOrUpdateWorker = () => {
+        const name = document.getElementById('workerName').value.trim();
+        const coef = parseFloat(document.getElementById('workerCoef').value);
+
+        if (!name || isNaN(coef) || coef <= 0) {
+            showToast('Будь ласка, введіть коректні ім\'я та коефіцієнт (більше 0)!', true);
+            return;
+        }
+
+        let workers = getWorkers();
+
+        if (editWorkerIndex !== null) {
+            const isNameTaken = workers.some((w, i) => i !== editWorkerIndex && w.name.toLowerCase() === name.toLowerCase());
+            if (isNameTaken) {
+                showToast('Ім’я вже зайняте іншим працівником.', true);
+                return;
+            }
+            workers[editWorkerIndex] = { name, coef };
+        } else {
+            const isNameTaken = workers.some(w => w.name.toLowerCase() === name.toLowerCase());
+            if (isNameTaken) {
+                showToast('Працівник з таким ім’ям вже існує. Будь ласка, вкажіть унікальне ім\'я або відредагуйте існуючого.', true);
+                return;
+            }
+            workers.push({ name, coef });
+        }
+
+        saveWorkers(workers);
+        renderWorkers();
+        renderWorkerCheckboxes(getSelectedWorkers());
+        renderWorkerTotals();
+        resetWorkerForm();
+        displayHistory();
+        showToast('Дані працівника оновлено!');
+    };
+
+    const removeWorker = (index) => {
+        if (confirm('Ви впевнені, що хочете видалити цього працівника?')) {
+            const workers = getWorkers();
+            const removed = workers.splice(index, 1);
+            saveWorkers(workers);
+            renderWorkers();
+            renderWorkerCheckboxes(getSelectedWorkers().filter(w => w.name !== removed[0].name));
+            renderWorkerTotals();
+            displayHistory();
+            showToast('Працівника видалено!');
+        }
+    };
+
+    /* ======= Підсумок по працівниках за місяць ======= */
+    const renderWorkerTotals = () => {
+        workerTotalsEl.innerHTML = `<div style="color:var(--muted);padding:6px 0;">Підсумок доступний лише при локальному зберіганні даних.</div>`;
+    };
+
+    /* ======= Графік заробітку ======= */
+    const renderEarningsChart = () => {
+        if (chartInstance) { chartInstance.destroy(); }
+        const ctx = earningsChartCanvas.getContext('2d');
+        ctx.clearRect(0, 0, earningsChartCanvas.width, earningsChartCanvas.height);
+        document.getElementById('earningsChart').style.display = 'none';
+        historyEl.querySelector('h3').textContent = 'Графік недоступний';
+    };
+
+    /* ======= Допоміжні ======= */
+    const getSelectedWorkers = () => {
+        const workers = getWorkers();
+        const selected = [];
+        document.querySelectorAll('#workerCheckboxes input:checked').forEach(ch => {
+            const w = workers.find(x => x.name === ch.value);
+            if (w) selected.push({ name: w.name, coef: Number(w.coef) });
+        });
+        return selected;
+    };
+
+    const switchToTab = (key) => {
+        const btn = document.querySelector(`.tab-btn[data-tab="${key}"]`);
+        if (btn) btn.click();
+    };
+
+    /* ======= Старт ======= */
+    loadTheme();
+    loadPrices();
+    createInputs();
+    renderWorkers();
+    renderWorkerTotals();
+    restoreTab();
+
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.value = localStorage.getItem('lastDate') || today;
+    
+    // --- Event Listeners ---
+    themeToggleBtn.addEventListener('click', toggleTheme);
+    dateInput.addEventListener('change', () => {
+        localStorage.setItem('lastDate', dateInput.value);
+        clearCurrentForm();
+    });
+    
+    // Main buttons
+    saveBtn.addEventListener('click', saveData);
+    savePricesBtn.addEventListener('click', savePrices);
+    saveFileBtn.addEventListener('click', saveHistoryToFile);
+    clearBtn.addEventListener('click', clearHistory);
+    clearCurrentBtn.addEventListener('click', clearCurrentForm);
+    addShiftBtn.addEventListener('click', () => { clearCurrentForm(); showToast('Форма очищена, можна додати нову зміну'); });
+    addOrUpdateWorkerBtn.addEventListener('click', handleAddOrUpdateWorker);
+    resetWorkerBtn.addEventListener('click', resetWorkerForm);
+    addOrUpdateCategoryBtn.addEventListener('click', handleAddOrUpdateCategory);
+    resetCategoryBtn.addEventListener('click', resetCategoryForm);
+    workerFilterSelect.addEventListener('change', displayHistory);
+    
+    // Event delegation for dynamically created elements
+    historyEl.addEventListener('click', (e) => {
+        const deleteBtn = e.target.closest('.history-delete-btn');
+        const editBtn = e.target.closest('.history-edit-btn');
+        const toggleBtn = e.target.closest('[data-toggle-date]');
+        
+        if (deleteBtn) {
+            const date = deleteBtn.dataset.date;
+            const shiftId = deleteBtn.dataset.shiftId;
+            e.stopPropagation();
+            removeShiftFromHistory(date, shiftId);
+        } else if (editBtn) {
+            const date = editBtn.dataset.date;
+            const shiftId = editBtn.dataset.shiftId;
+            e.stopPropagation();
+            switchToTab('calc');
+            loadShiftForEdit(date, shiftId);
+        } else if (toggleBtn) {
+            const date = toggleBtn.dataset.toggleDate;
+            const shiftsList = historyEl.querySelector(`[data-date-shifts="${date}"]`);
+            if (shiftsList) {
+                shiftsList.style.display = shiftsList.style.display === 'none' ? 'block' : 'none';
+                toggleBtn.textContent = shiftsList.style.display === 'none' ? '▼' : '▲';
+            }
+        }
+    });
+
+    workerListEl.addEventListener('click', (e) => {
+        const editBtn = e.target.closest('.edit-btn');
+        const delBtn = e.target.closest('.del-btn');
+        const listItem = e.target.closest('.workers-grid-item');
+        if (!listItem) return;
+
+        const index = parseInt(listItem.dataset.index);
+
+        if (editBtn) {
+            startEditWorker(index);
+        } else if (delBtn) {
+            removeWorker(index);
+        }
+    });
+
+    customCategoriesListEl.addEventListener('click', (e) => {
+        const delBtn = e.target.closest('.del-btn');
+        const editBtn = e.target.closest('.edit-btn');
+        const listItem = e.target.closest('.workers-grid-item');
+        if (!listItem) return;
+
+        const id = listItem.dataset.id;
+        
+        if (delBtn) {
+            removeCustomCategory(id);
+        } else if (editBtn) {
+            startEditCategory(id);
+        }
+    });
+});
+</script>
+</body>
+</html>
